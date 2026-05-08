@@ -458,6 +458,7 @@ body {
                 <button data-val="none" class="active">None</button>
                 <button data-val="entropy">Entropy</button>
                 <button data-val="type_aware">Type-aware</button>
+                <button data-val="h_diff">ΔH</button>
             </div>
         </div>
         <div class="control-group" id="retentionGroup" style="display:none;">
@@ -644,6 +645,15 @@ function computeFilterMask() {
             const h = getEntropyStudent(tokens[i]);
             if (h !== null && isFinite(h)) scores[i] = h;
         }
+    } else if (state.filter === 'h_diff') {
+        // Rank tokens by H_student − H_teacher (student more uncertain than teacher).
+        for (let i = 0; i < n; i++) {
+            const hs = getEntropyStudent(tokens[i]);
+            const ht = getEntropyTeacher(tokens[i]);
+            if (hs !== null && ht !== null && isFinite(hs) && isFinite(ht)) {
+                scores[i] = hs - ht;
+            }
+        }
     } else if (state.filter === 'type_aware') {
         // s_t = 1 − (1 − ĥ_t)(1 − δ̂_t), with min-max normalization over
         // the active tokens (those where both H_S and KL are computable).
@@ -826,7 +836,10 @@ function render() {
         kl:        'KL(student ‖ teacher)',
     };
     if (filterMask) {
-        const filterLabel = state.filter === 'entropy' ? 'entropy' : 'type-aware';
+        const filterLabel =
+            state.filter === 'entropy' ? 'entropy' :
+            state.filter === 'h_diff' ? 'ΔH (student − teacher)' :
+            'type-aware';
         responseHeader.textContent =
             `${state.response} response — ${filterLabel} filter, keep top ${(state.retention * 100).toFixed(0)}%`;
     } else {
